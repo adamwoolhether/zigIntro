@@ -117,3 +117,83 @@ test "for" {
 
     for (string) |_| {}
 }
+
+// FUNCTIONS
+
+// All functions are immutable. If a copy is desired, you must explicitly make one.
+// camelCase is usedd for functions. (vars are snake_case)
+fn addFive(x: u32) u32 {
+    return x + 5;
+}
+
+test "function" {
+    const y = addFive(0);
+    try expect(@TypeOf(y) == u32);
+    try expect(y == 5);
+}
+
+// Recursion example: Not that with recursion, the compiler is no longer able to work out
+// the maximum stack size, leading to potentially unsafe behavior. We'll caover how to do
+// this safely later.
+// We can ignore values with `_` in place of the var/const declaration. This only works within
+// function scopes and blocks, not globally.
+fn fibonacci(n: u16) u16 {
+    if (n == 0 or n == 1) return n;
+    return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+test "fucntion recursion" {
+    const x = fibonacci(10);
+    try expect(x == 55);
+}
+
+// DEFER
+
+test "defer" {
+    var x: i16 = 5;
+    {
+        defer x += 2;
+        try expect(x == 5);
+    }
+    try expect(x == 7);
+}
+// multiple defers in a single block will be executed in reverse order.
+test "multi defet" {
+    var x: f32 = 5;
+    {
+        defer x += 2; // exec'd second
+        defer x /= 2; // exec's first
+    }
+
+    try expect(x == 4.5);
+}
+
+// ERRORS
+
+// Erros set's are similar to an enum, where each error in the set is a value.
+// No exceptions in Zig: errors are values.
+const FileOpenError = error{ // create an error set
+    AccessDenied,
+    OutOfMemory,
+    FileNotFound,
+};
+// Erorr sets coerce to their supersets.
+const AllocationError = error{OutOfMemory};
+
+test "coerce error from a subset to a superset" {
+    const err: FileOpenError = AllocationError.OutOfMemory;
+    try expect(err == FileOpenError.OutOfMemory);
+}
+
+// Error set types and normal types can be combined with the `!` operator for form an error union type.
+// Values of these types may be an error value, or value of the normal type.
+// We'll use `catch` to create a value of an error union type. `catch` is followed by an expression
+// which is evaluated when the value before it is an error, it's used to provide a fallback value.
+// We could alternatively use a `noreturn` - the type of `return`, `while (true)` and others.
+test "error union" {
+    const maybe_error: AllocationError!u16 = 10;
+    const no_error = maybe_error catch 0;
+
+    try expect(@TypeOf(no_error) == u16);
+    try expect(no_error == 10);
+}
