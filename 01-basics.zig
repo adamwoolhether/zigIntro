@@ -197,3 +197,73 @@ test "error union" {
     try expect(@TypeOf(no_error) == u16);
     try expect(no_error == 10);
 }
+
+// Functions often return error unions. Heres one that uses a catch, with `|err|` syntax
+// that receives the value of the error. This is called "payload capturing", and used in
+// many places. (This is not used for lambdas, as is with some langs).
+fn failingFunction() error{Oops}!void {
+    return error.Oops;
+}
+
+test "returning an error" {
+    failingFunction() catch |err| {
+        try expect(err == error.Oops);
+        return;
+    };
+}
+
+// `try x` is shortcut for `x catch |err| return err`. It's common where handling an error
+// isn't appropriate. Zig's `try` and `catch` are unrelated to other langs' try-catch.
+fn failFn() error{Oops}!i32 {
+    try failingFunction();
+    return 12;
+}
+
+test "try" {
+    var v = failFn() catch |err| {
+        try expect(err == error.Oops);
+        return;
+    };
+    try expect(v == 12); // is never reached
+}
+
+// `errdefer` works like `defer`, but only executes when a function is returned from
+// with an error inside of the `errdefer`'s block.'
+var problems: u32 = 98;
+
+fn failFnCounter() error{Oops}!void {
+    errdefer problems += 1;
+    try failingFunction();
+}
+
+test "errdefer" {
+    failFnCounter() catch |err| {
+        try expect(err == error.Oops);
+        try expect(problems == 99);
+        return;
+    };
+}
+
+// Error unions returned from a func can have their error sets inferred by not having
+// an explicit error set. The inferred error set contains all possible errors which
+// the function may return.
+fn createFile() !void {
+    return error.AccessDenied;
+}
+
+test "inferred error set" {
+    // type coercion successfully takes place
+    const x: error{AccessDenied}!void = createFile();
+
+    // Zig doesn't let us ignore error unions via `_ = x;`,
+    // we must unwrap it with `try`, `catch`, or `if` by any means.
+    _ = x catch {};
+}
+
+// Error sets can also be merged.
+const A = error{ NotDir, PathNotFound };
+const B = error{ OutOfMemory, PathNotFound };
+const C = A || B;
+
+// We should generally avoid `anyerror`. It's the global error set, superset of all error sets,
+// and can have an error from any set coerce to a value of it.
