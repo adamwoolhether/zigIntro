@@ -267,3 +267,115 @@ const C = A || B;
 
 // We should generally avoid `anyerror`. It's the global error set, superset of all error sets,
 // and can have an error from any set coerce to a value of it.
+
+// SWITCH
+
+// Works as both a statement and an expression. All possible values must have an associated branch - values
+// can't be left out. Cases can't fall through to other branches.
+test "switch statement" {
+    var x: i8 = 10;
+    switch (x) {
+        -1...1 => {
+            x = -x;
+        },
+        10, 100 => {
+            // Special handling needed for dividing signed ints.
+            x = @divExact(x, 10);
+        },
+        else => {},
+    }
+
+    try expect(x == 1);
+}
+
+test "swith expression" {
+    var x: i8 = 10;
+    x = switch (x) {
+        -1...1 => -x,
+        10, 100 => @divExact(x, 10),
+        else => x,
+    };
+
+    try expect(x == 1);
+}
+
+// RUNTIME SAFETY
+
+// Zig safety allows problems to be found during execution.
+// Safety can be left on or turned off. detectable illegal behavior will result in
+// a panic with safety turned on, or undefined behavior if turned off.
+// Safety is off for some build modes.
+
+// Demo runtime safety from out of bounds slice:
+// test "out of bounds" {
+//     const j = [3]u8{ 1, 2, 3 };
+//     var index: u8 = 5;
+
+//     const k = j[index];
+//     _ = k;
+// }
+
+// We can disable runtime safety for the current block with the built-in `@setRuntimeSafety`
+test "out of bounds no safety" {
+    @setRuntimeSafety(false);
+    const j = [3]u8{ 1, 2, 3 };
+    var index: u8 = 5;
+
+    const k = j[index];
+    _ = k;
+}
+
+// UNREACHABLE
+
+//  `unreachable` asserts to the compiler that a statement will not be reached. It's used
+// to inform compiler that a branch is impossible, allowing the optimiser to take advantage.
+// Reaching `unreachable` is detectable illegal behavior.
+// test "unreachable" {
+//     const x: i32 = 1;
+//     const y: u32 = if (x == 2) 5 else unreachable;
+//     _ = y;
+// }
+
+// Demonstrating an unreachable switch.
+fn asciiToUpper(x: u8) u8 {
+    return switch (x) {
+        'a'...'z' => x + 'A' - 'a',
+        'A'...'Z' => x,
+        else => unreachable,
+    };
+}
+
+test "unreachable switch" {
+    try expect(asciiToUpper('a') == 'A');
+    try expect(asciiToUpper('A') == 'A');
+}
+
+// POINTERS
+
+// Normal pointers in Zig can't have 0 or null as a value.
+// Syntax: `*T`
+// Referencing is done with `&variable` and dereferencing with `variable.*`
+fn increment(num: *u8) void {
+    num.* += 1;
+}
+
+test "pointers" {
+    var x: u8 = 1;
+    increment(&x);
+
+    try expect(x == 2);
+}
+
+// Setting a *T to 0 value is detectable illegal behavior.
+// test "naughty pointer" {
+//     var x: u16 = 0;
+//     var y: *u8 = @intToPtr(*u8, x);
+//     _ = y;
+// }
+
+// const pointers cannot be used to modify the referenced data. Referencind a const variable yields a const pointer.
+// test "const pointers" {
+//     const x: u8 = 1;
+//     var y = &x;
+//     y.* += 1;
+// }
