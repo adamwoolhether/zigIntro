@@ -379,3 +379,58 @@ test "pointers" {
 //     var y = &x;
 //     y.* += 1;
 // }
+
+// POINTER SIZED INTEGERS
+
+// `usize` and `isize` are given as unsigned and signted integers with the same size as pointers.
+test "useize" {
+    try expect(@sizeOf(usize) == @sizeOf(*u8));
+    try expect(@sizeOf(isize) == @sizeOf(*u8));
+}
+
+// MANY-ITEM POINTERS
+
+// `[*]T` is used when we have a pointer to an unknown amount of elements.
+// It works like `*T` but supports indexing syntax, pointer arithmetic and slicing.
+// It can't point to a type which doesn't have a known size, unlike `*T`.
+// `*T` coerces to `[*]T`.
+// Many pointers can point to any amount of elements, including 0 & 1.
+
+// SLICES
+
+// Slices are a pair of `[*]T`, pointing to the data, and a `usize`, the element count.
+// `[]T` is the syntax. Slices have the same attributes as pointers: there are also const slices.
+// For loops are used to iterate.
+// String literals coerce to `[]const u8`.
+// `x[n..m]` is the syntax to create a slice from an array, aka "slicing",
+// creating a slice of elements starting at `x[]n` and ending at `x[m-1]`.
+
+// Below example uses a const slice as the values which the slice points to don't need to be modified.
+fn total(values: []const u8) usize {
+    var sum: usize = 0;
+    for (values) |v| sum += v;
+
+    return sum;
+}
+test "slices" {
+    const arrayConst = [_]u8{ 1, 2, 3, 4, 5 };
+    const slice = arrayConst[0..3];
+
+    try expect(total(slice) == 6);
+}
+
+// if the `n` and `m` values are known at compile time, slicing will produce a pointer to an array.
+// This is ok because a pointer to an array `*[N]T` will coerce to `[]T`.
+test "slices 2" {
+    const arrayConst = [_]u8{ 1, 2, 3, 4, 5 };
+    const slice = arrayConst[0..3];
+
+    try expect(@TypeOf(slice) == *const [3]u8);
+}
+
+// `x[n..]` is used to slice all the way to the end.
+test "slice 3" {
+    var arrayTest = [_]u8{ 1, 2, 3, 4, 5 };
+    var slice = arrayTest[0..];
+    _ = slice;
+}
