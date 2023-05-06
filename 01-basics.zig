@@ -24,7 +24,7 @@ var bb: u32 = undefined;
 // [N]T
 // `N` is the number of elements and `T` is the type of those elemements.
 // `N` may b replaced with `_` to infer the array's size for array literals.
-const c = [5]u8{ 'h', 'e', 'l', 'l', 'o' };
+const cc = [5]u8{ 'h', 'e', 'l', 'l', 'o' };
 const d = [_]u8{ 'w', 'o', 'r', 'l', 'd' };
 // The get the array's size, lens the `len` field.
 const array = [_]u8{ 'h', 'e', 'l', 'l', 'o' };
@@ -636,6 +636,54 @@ test "switch on tagged union" {
 }
 
 // The type of a tagged union can also be inferred. This is the same as the Tagged type above.
-const Tagged = union(enum) { a: u8, b: f32, c: bool };
+const Tagged2 = union(enum) { a: u8, b: f32, c: bool };
 // `void` member types have their types ommitted from the syntax. Here, `none` is type `void`.
-const Tagged2 = union(enum) { a: u8, b: f32, c: bool, none };
+const Tagged3 = union(enum) { a: u8, b: f32, c: bool, none };
+
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// INTEGER RULES
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Zig supports hex, octal, and binary integer literals.
+const decimal_int: i32 = 98222;
+const hex_int: u8 = 0xff;
+const another_hex_int: u8 = 0xFF;
+const octal_int: u16 = 0o755;
+const binary_int: u8 = 0b11110000;
+
+// Underscores can also be used between digits for readability.
+const one_billion: u64 = 1_000_000_000;
+const binary_mask: u64 = 0b1_1111_1111;
+const permissions: u64 = 0o7_5_5;
+const big_address: u64 = 0xFF80_0000_0000_0000;
+
+// "Integer Widening" means integeres of a type can coerce to an integer of another type, provided that the
+// new type can fit all of the values that the old type can.
+test "integer widening" {
+    const a: u8 = 250;
+    const b: u16 = a;
+    const c: u32 = b;
+    try expect(c == a);
+}
+// If a value can't coerce to the desired type, `@intCast` can explicitly convert from on type to another.
+// If the value is out of the destination type's range, this is detectable illegal behavior.
+test "@intCat" {
+    const x: u64 = 200;
+    const y = @intCast(u8, x);
+    try expect(@TypeOf(y) == u8);
+}
+
+// Integers are by default not allowed to overflow, which is detectable illegal behavior. If an
+// overflow is desired, Zig provides overflow operators.
+// Normal Operator | Wrapping Operator
+// +               |    +%
+// -               |    -%
+// *               |    *%
+// +=              |    +%=
+// -=              |    -%=
+// *=              |    *%=
+test "well defined overflow" {
+    var a: u8 = 255;
+    a +%= 1;
+    try expect(a == 0);
+}
