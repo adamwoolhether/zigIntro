@@ -14,8 +14,8 @@ var inferred_variable = @as(u32, 5000);
 // consts and vars must have a value. Otherwise, the `undefined` value, which coeres to any type
 // may be used as long as a type annotation is provided.
 // const values are preferred over var values.
-const a: i32 = undefined;
-var b: u32 = undefined;
+const aa: i32 = undefined;
+var bb: u32 = undefined;
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ARRAYS
@@ -590,8 +590,52 @@ const Stuff = struct {
 };
 
 test "automatic dereference" {
-    var thing = Stuff{ .x = 10, .y = 20};
+    var thing = Stuff{ .x = 10, .y = 20 };
     thing.swap();
     try expect(thing.x == 20);
     try expect(thing.y == 10);
 }
+
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// UNIONS
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Unions allow defining types that store one value of many possible typed
+// fields; only one field may be active at a time.
+
+// Bare unions don't have a guaranteed memory layout. As such, bare unions can be
+// used to reinterpret memory. Accessing a field in a union that isn't active is
+// detectable illegal behavior.
+const Result = union {
+    int: i64,
+    float: f64,
+    bool: bool,
+};
+// This test will fail
+// test "simple union" {
+//     var result = Result{ .int = 1234 };
+//     result.float = 12.35;
+// }
+
+// Tagged unions use enums to detect which field is active. In this example, we use payload capturing
+// to detect which field is active.
+// Here, a `pointer capture` is used; captured values are immutable, but with the `|*value|` syntax we
+// can captures a pointer to the values themselves. This allows dereferencing to mutate the original value.
+const Tag = enum { a, b, c };
+
+const Tagged = union(Tag) { a: u8, b: f32, c: bool };
+
+test "switch on tagged union" {
+    var value = Tagged{ .b = 1.5 };
+    switch (value) {
+        .a => |*byte| byte.* += 1,
+        .b => |*float| float.* *= 2,
+        .c => |*b| b.* = !b.*,
+    }
+    try expect(value.b == 3);
+}
+
+// The type of a tagged union can also be inferred. This is the same as the Tagged type above.
+const Tagged = union(enum) { a: u8, b: f32, c: bool };
+// `void` member types have their types ommitted from the syntax. Here, `none` is type `void`.
+const Tagged2 = union(enum) { a: u8, b: f32, c: bool, none };
