@@ -725,26 +725,24 @@ test "int-float conversion" {
 }
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// LABELLED BLOCKS
+// LABELLED LOOPS
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Blocks are expressions that can be given a label, used to yield values, meaning they can be used in place of a value.
-// Here we use a label called `blk`. An empty block's value is the type `void`.
-test "labelled blocks" {
-    const count = blk: {
-        var sum: u32 = 0;
-        var i: u32 = 0;
-        while (i < 10) : (i += 1) sum += i;
-        break :blk sum;
-    };
-    try expect(count == 45);
-    try expect(@TypeOf(count) == u32);
+// Loops can also be given labels, allowing us to `break` or `continue` to outer loops.
+test "nested continue" {
+    var count: usize = 0;
+    outer: for ([_]i32{ 1, 2, 3, 4, 5, 6, 7, 8 }) |_| {
+        for ([_]i32{ 1, 2, 3, 4, 5 }) |_| {
+            count += 1;
+            continue :outer;
+        }
+    }
+    try expect(count == 8);
 }
-// This is the equivalent of C's i++
-// blk: {
-//     const tmp = i;
-//     i += 1;
-//     break :blk tmp;
-// }
+
+
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// LOOPS AS EXPRESSIONS
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
