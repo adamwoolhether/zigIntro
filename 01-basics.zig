@@ -740,9 +740,21 @@ test "nested continue" {
     try expect(count == 8);
 }
 
-
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // LOOPS AS EXPRESSIONS
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// we can use `break` to return a value, just like `return`.
 
+fn rangeHasNumber(begin: usize, end: usize, number: usize) bool {
+    var i = begin;
+    return while (i < end) : (i += 1) {
+        if (i == number) {
+            break true;
+        }
+    } else false;
+}
+
+test "while loop expression" {
+    try expect(rangeHasNumber(0, 10, 3));
+}
