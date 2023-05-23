@@ -758,3 +758,76 @@ fn rangeHasNumber(begin: usize, end: usize, number: usize) bool {
 test "while loop expression" {
     try expect(rangeHasNumber(0, 10, 3));
 }
+
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// OPTIONALS
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Syntax: `?T`, optionals are used to store the data `null` or a value of type `T`.
+// TODO: WHY DOESN'T THIS WORK
+// test "optional" {
+//     var found_index: ?usize = null;
+//     const data = [_]i32{ 1, 2, 3, 4, 5, 6, 7, 8, 12 };
+//     for (data, 0..) |v, i| {
+//         if (v == 10) found_index = i;
+//     }
+//     try expect(found_index == null);
+// }
+
+// optionals support "orelse" expression, which acts when the optional is `null`, unwrapping
+// the optional to its child type.
+test "orelse" {
+    var a: ?f32 = null;
+    var b = a orelse 0;
+    try expect(b == 0);
+    try expect(@TypeOf(b) == f32);
+}
+
+// `.?` is shorthand for `orelse unreachable`. This is used when it's impossible for an
+// optional value to be null, and using it to unwrap a `null` value is detectable illegal behavior.
+test "orelse unreachable" {
+    const a: ?f32 = 5;
+    const b = a orelse unreachable;
+    const c = a.?;
+    try expect(b == c);
+    try expect(@TypeOf(c) == f32);
+}
+
+// Payload capturing works in many places for optionals,
+// meaning that if it's non-null we can "capture" its non-null value.
+// This example will uses an 'if' optional payload capture. `a` and `b` are equivalent.
+// `if (b) |value|` captures the value of `b` if it's non-null, making its value available as `value`.
+// The captured value is immutable.
+test "if optional payload capture" {
+    const a: ?i32 = 5;
+    if (a != null) {
+     const value = a.?;
+     _ = value;
+    }
+
+    var b: ?i32 = 5;
+    if (b) |*value| {
+        value.* += 1;
+    }
+    try expect(b.? == 6);
+}
+
+// using while
+var numbers_left: u32 = 4;
+fn eventuallyNullSequence() ?u32 {
+    if (numbers_left == 0) return null;
+    numbers_left -= 1;
+    return numbers_left;
+}
+
+test "while null capture" {
+    var sum: u32 = 0;
+    while (eventuallyNullSequence()) |value| {
+        sum += value;
+    }
+    try expect(sum == 6); // 3 + 2 + 1
+}
+// Optional pointer/slice types don't take up extra memory, compared to non-nil ones becasuse
+// they use the 0 value of the pointer for null.
+// Null pointers in Zig must be unwrapped to a non-optional before dereferencing.
+// This stops null pointer dereferences from happening accidentally.
